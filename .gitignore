@@ -1,3 +1,9 @@
 /target
 .cargo-ok
 .DS_Store
+
+/data
+/extern
+/fasta
+
+/.vscode
