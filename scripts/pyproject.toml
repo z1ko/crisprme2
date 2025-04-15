@@ -1,0 +1,7 @@
+[project]
+name = "scripts"
+version = "0.1.0"
+description = "Scripts to simulate crisprme2"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
