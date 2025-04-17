@@ -113,17 +113,17 @@ def alignment_pop_stack_immediate(query: str, target: str, max_gaps: int, max_mi
 
         # Check valid
         # Load from shared memory
-        for lane_id in range(warp_size):
-            if frontier_size - lane_id > 0:
-                curr = warp_curr[lane_id]
-
-                # Skip invalid nodes
-                if (curr.q >= len(query) or curr.t >= len(target) or curr.g > max_gaps or curr.m > max_mismatches):
-                    warp_curr[lane_id] = None
-
-                # Found an acceptable solution
-                if (curr.q == len(query) - 1):
-                    return True, curr, max(frontier_sizes), expansions
+        #for lane_id in range(warp_size):
+        #    if frontier_size - lane_id > 0:
+        #        curr = warp_curr[lane_id]
+        #
+        #        # Skip invalid nodes
+        #        if (curr.q >= len(query) or curr.t >= len(target) or curr.g > max_gaps or curr.m > max_mismatches):
+        #            warp_curr[lane_id] = None
+        #
+        #        # Found an acceptable solution
+        #        if (curr.q == len(query) - 1):
+        #            return True, curr, max(frontier_sizes), expansions
 
         # Add all mismatches
         # Parallel prefix-scan using warp intrinsics
@@ -144,7 +144,7 @@ def alignment_pop_stack_immediate(query: str, target: str, max_gaps: int, max_mi
                     return True, curr, max(frontier_sizes), expansions
 
                 # Otherwise add to queue
-                queue.append(Node(curr.q + 1, curr.t + 1, curr.g, mismatches))
+                queue.append(new_node)
 
         # Add gap to target, semi-global
         for lane_id in range(warp_size):
@@ -163,7 +163,7 @@ def alignment_pop_stack_immediate(query: str, target: str, max_gaps: int, max_mi
                     return True, curr, max(frontier_sizes), expansions
 
                 # Otherwise add to queue
-                queue.append(Node(curr.q, curr.t + 1, t_gaps, curr.m))
+                queue.append(new_node)
 
         # Add gap to query
         for lane_id in range(warp_size):
@@ -181,7 +181,7 @@ def alignment_pop_stack_immediate(query: str, target: str, max_gaps: int, max_mi
                     return True, curr, max(frontier_sizes), expansions
 
                 # Otherwise add to queue
-                queue.append(Node(curr.q + 1, curr.t, curr.g + 1, curr.m))
+                queue.append(new_node)
 
     return False, None, max(frontier_sizes), expansions
 
@@ -197,7 +197,7 @@ if __name__ == "__main__":
         target = random_string("ACTG", 32)
 
         print(f"alignment of {query} (len={len(query)}) against {target} (len = {len(target)})")
-        result, node, max_frontier_size, expansions = alignment_pop_stack_immediate(query, target, 2, 3, 64)
+        result, node, max_frontier_size, expansions = alignment_pop_stack_immediate(query, target, 3, 3, 32)
         print(f"result = {result}, max_frontier_size = {max_frontier_size}, expansions = {expansions}")
 
         frontiers.append(max_frontier_size)

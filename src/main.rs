@@ -10,7 +10,7 @@ mod utils;
 
 //use ptree::Tree;
 
-const SEQ_LEN: usize = 24;
+const SEQ_LEN: usize = 20;
 
 /// Connection to CUDA engine
 #[cxx::bridge]
@@ -20,10 +20,15 @@ mod ffi {
 
         // Test print value
         unsafe fn mine(data: *mut u8, n: i32);
+
+        unsafe fn filter(query: *const u8, trgts: *const u8, result: *mut u8, qlen: i32, tlen: i32, n: i32);
     }
 }
 
 fn main() -> io::Result<()> {
+
+    tests::launch_kernel_fasta();
+    return Ok(());
 
     let fasta = &fasta::load_from_file("fasta/chr22.fa")?;
     let seq_count = fasta.len() - SEQ_LEN + 1;
@@ -49,4 +54,65 @@ fn main() -> io::Result<()> {
     //}
 
     Ok(())
+}
+
+//#[cfg(test)]
+mod tests {
+    use crate::utils::{generate_test_sequence};
+    use super::*;
+
+    pub(crate) fn launch_kernel_fasta() {
+
+        // Size of the target sequences
+        const TLEN: usize = 24;
+        // Size of the query sequence
+        const QLEN: usize = 24;
+        // Shift between sequences
+        const DELTA: usize = 1;
+        // Edit distance threshold
+        const THRESHOLD: u8 = 6;
+
+        // Create random reference sequence
+        let fasta = fasta::load_from_file("fasta/chr22.fa").unwrap();
+        println!("fasta size: {} bases", fasta.len());
+        
+        // Insert windows into reference set
+        let mut sequences: HashSet<String> = HashSet::new();
+        
+        let mut beg = 0;
+        while beg < fasta.len() - TLEN - 1 {
+            let seq = std::str::from_utf8(&fasta[beg..beg+TLEN]).unwrap();
+            sequences.insert(String::from(seq));
+            beg += DELTA;
+        }
+
+        let n = sequences.len();
+        println!("unique sequence count: {} ({} MB)", n, (n * TLEN) as f32 / 1e6);
+        let mut results = vec![255; n];
+
+        // Add all strings into linear memory
+        let mut targets: Vec<u8> = Vec::new();
+        for seq in &sequences {
+            targets.extend(seq.as_bytes());
+        }
+
+        // Random query string
+        let query = utils::generate_test_sequence(QLEN, b"ACTG", 2025);
+        println!("query: {}", std::str::from_utf8(&query).unwrap());
+
+        unsafe {
+            ffi::filter(
+                query.as_ptr(), 
+                targets.as_ptr(),
+                results.as_mut_ptr(), 
+                QLEN as i32, 
+                TLEN as i32, 
+                n    as i32
+            );
+        }
+
+        // How many elements below threshold?
+        let valid = results.iter().map(|e| if *e <= THRESHOLD { 1 } else { 0 }).sum::<u32>();
+        println!("valid results: {:?}", valid);
+    }
 }

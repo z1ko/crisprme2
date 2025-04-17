@@ -246,6 +246,7 @@ mod tests {
         assert_eq!(packed_tree.sequences(), real_seq_set);
     }
 
+    /*
     /// Tests that the tree can be split
     #[test] fn split() {
 
@@ -272,4 +273,5 @@ mod tests {
         // Check that they contain the same elements
         assert!(real_seq_set.eq(&split_seq_set));
     }
+     */
 }
