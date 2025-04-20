@@ -444,10 +444,10 @@ void filter(const u8* query, const u8* strings, u8* result, int qlen, int tlen, 
     cudaMemcpy(dev_query, query, sizeof(u8) * qlen, cudaMemcpyHostToDevice);
 
     constexpr u32 warp_size = 32;
-    constexpr u32 warp_count = 4;
+    constexpr u32 warp_count = 2;
 
     int max_active_blocks = 0;
-    cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks, filter0<warp_count, 24, 24>, warp_count * warp_size, 0);
+    cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks, filter1<warp_count, 24, 24>, warp_count * warp_size, 0);
     printf("max active blocks: %d\n", max_active_blocks);
 
     u32 blocks = (n + warp_count * warp_size - 1) / (warp_count * warp_size);
@@ -458,7 +458,7 @@ void filter(const u8* query, const u8* strings, u8* result, int qlen, int tlen, 
     cudaEventCreate(&stop);
 
     cudaEventRecord(start, 0);
-    filter0<warp_count, 24, 24><<<blocks, warp_count * warp_size>>>(
+    filter1<warp_count, 24, 24><<<blocks, warp_count * warp_size>>>(
         dev_query,
         dev_strings,
         dev_result,

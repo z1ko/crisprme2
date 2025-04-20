@@ -7,6 +7,7 @@ use ptree::PackedTree;
 mod fasta;
 mod ptree;
 mod utils;
+mod align;
 
 //use ptree::Tree;
 
@@ -70,10 +71,10 @@ mod tests {
         // Shift between sequences
         const DELTA: usize = 1;
         // Edit distance threshold
-        const THRESHOLD: u8 = 6;
+        const THRESHOLD: u8 = 4;
 
         // Create random reference sequence
-        let fasta = fasta::load_from_file("fasta/chr22.fa").unwrap();
+        let fasta = fasta::load_from_file("/home/z1ko/univr/parco/crisprme2/fasta/chr22.fa").unwrap();
         println!("fasta size: {} bases", fasta.len());
         
         // Insert windows into reference set
