@@ -11,7 +11,7 @@ license = "MIT"
 [dependencies]
 bincode = "1.3.3"
 cxx = { version = "1.0.156", features = ["c++17"] }
-rand = "0.9.0"
+rand = "0.9.1"
 serde = { version = "1.0.219", features = ["derive"] }
 
 [build-dependencies]
