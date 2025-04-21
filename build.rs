@@ -11,6 +11,7 @@ fn main() {
     let cc = cc.cuda(true).std("c++17")
         .flag("-gencode")
         .flag(format!("arch={},code={}", ARCH, CODE))
+        //.flag("-G")
         .flag("-cudart=shared");
         
     // Link CCCL and compile kernels

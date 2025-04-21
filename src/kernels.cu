@@ -447,7 +447,7 @@ void filter(const u8* query, const u8* strings, u8* result, int qlen, int tlen, 
     constexpr u32 warp_count = 2;
 
     int max_active_blocks = 0;
-    cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks, filter1<warp_count, 24, 24>, warp_count * warp_size, 0);
+    cudaOccupancyMaxActiveBlocksPerMultiprocessor(&max_active_blocks, filter2<warp_count, 24, 24>, warp_count * warp_size, 0);
     printf("max active blocks: %d\n", max_active_blocks);
 
     u32 blocks = (n + warp_count * warp_size - 1) / (warp_count * warp_size);
@@ -457,18 +457,75 @@ void filter(const u8* query, const u8* strings, u8* result, int qlen, int tlen, 
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
 
+#define LAPS_COUNT 100
+
+    float laps_acc = 0.0f;
+    for (u32 lap = 0; lap < LAPS_COUNT; ++lap) {
+
+        cudaEventRecord(start, 0);
+        filter1<warp_count, 24, 24><<<blocks, warp_count * warp_size>>>(
+            dev_query,
+            dev_strings,
+            dev_result,
+            n
+        );
+
+        cudaEventRecord(stop, 0);
+        cudaEventSynchronize(stop);
+
+        float time;
+        cudaEventElapsedTime(&time, start, stop);
+        laps_acc += time;
+    }
+
+    printf("elapsed kernel time (%d reps): %.2f ms\n", LAPS_COUNT, laps_acc / LAPS_COUNT);
+
+
+    // Get result for GPU
+    cudaMemcpy(result, dev_result, n, cudaMemcpyDeviceToHost);
+    cuda_check_error();
+
+    cudaFree(dev_query);
+    cudaFree(dev_strings);
+    cudaFree(dev_result);
+}
+
+/*
+void filter_fixed(const u8* query, const u8* strings, u8* result, int qlen, int tlen, int n) {
+    
+    constexpr u32 blocks_mult = 32; 
+    constexpr u32 warp_size   = 32;
+    constexpr u32 warp_count  = 2;
+    
+    u32 sm_count;
+    cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, devId);
+    u32 blocks = sm_count * blocks_mult;
+
+    unsigned char *dev_query, *dev_strings, *dev_result;
+
+    cudaMalloc(&dev_result, n);
+    cudaMalloc(&dev_strings, tlen * n);
+    cudaMalloc(&dev_query, qlen);
+
+    // Copy CPU memory to GPU
+    cudaMemcpy(dev_strings, strings, sizeof(u8) * tlen * n, cudaMemcpyHostToDevice);
+    cudaMemcpy(dev_query, query, sizeof(u8) * qlen, cudaMemcpyHostToDevice);
+
+    cudaEvent_t start, stop; 
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
     cudaEventRecord(start, 0);
-    filter1<warp_count, 24, 24><<<blocks, warp_count * warp_size>>>(
+    filter2<warp_count, 24, 24><<<blocks, warp_count * warp_size>>>(
         dev_query,
         dev_strings,
         dev_result,
         n
     );
-
     cudaEventRecord(stop, 0);
-    cudaEventSynchronize(stop);
 
     float time;
+    cudaEventSynchronize(stop);
     cudaEventElapsedTime(&time, start, stop);
     printf("kernel elapsed time: %3.1f ms \n", time);
 
@@ -480,3 +537,4 @@ void filter(const u8* query, const u8* strings, u8* result, int qlen, int tlen, 
     cudaFree(dev_strings);
     cudaFree(dev_result);
 }
+*/

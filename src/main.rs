@@ -71,34 +71,42 @@ mod tests {
         // Shift between sequences
         const DELTA: usize = 1;
         // Edit distance threshold
-        const THRESHOLD: u8 = 4;
+        const THRESHOLD: u8 = 0;
+        // Number of sequences
+        const N: usize = 40000000;
 
         // Create random reference sequence
         let fasta = fasta::load_from_file("/home/z1ko/univr/parco/crisprme2/fasta/chr22.fa").unwrap();
         println!("fasta size: {} bases", fasta.len());
         
-        // Insert windows into reference set
-        let mut sequences: HashSet<String> = HashSet::new();
-        
-        let mut beg = 0;
-        while beg < fasta.len() - TLEN - 1 {
-            let seq = std::str::from_utf8(&fasta[beg..beg+TLEN]).unwrap();
-            sequences.insert(String::from(seq));
-            beg += DELTA;
-        }
-
-        let n = sequences.len();
-        println!("unique sequence count: {} ({} MB)", n, (n * TLEN) as f32 / 1e6);
-        let mut results = vec![255; n];
-
         // Add all strings into linear memory
         let mut targets: Vec<u8> = Vec::new();
-        for seq in &sequences {
-            targets.extend(seq.as_bytes());
+
+        let mut beg  = 0;
+        let mut n = 0;
+        while beg < fasta.len() - TLEN - 1 && n < N {
+            targets.extend(&fasta[beg..beg+TLEN]);
+
+            beg += DELTA;
+            n += 1;
         }
+
+        assert_eq!(targets.len(), n * TLEN);
+        println!("sequence count: {} ({} MB)", n, (n * TLEN) as f32 / 1e6);
+        let mut results = vec![255; n];
+        
+        /*
+        println!("data: ");
+        for i in 0..n {
+            let beg = i * TLEN;
+            let seq = std::str::from_utf8(&targets[beg..beg+TLEN]).unwrap();
+            println!("{:>2} {}", i, seq);
+        }
+         */
 
         // Random query string
         let query = utils::generate_test_sequence(QLEN, b"ACTG", 2025);
+        let query = targets[0..QLEN].to_owned();
         println!("query: {}", std::str::from_utf8(&query).unwrap());
 
         unsafe {
@@ -111,6 +119,9 @@ mod tests {
                 n    as i32
             );
         }
+
+        // Results
+        //println!("results: {:?}", results);
 
         // How many elements below threshold?
         let valid = results.iter().map(|e| if *e <= THRESHOLD { 1 } else { 0 }).sum::<u32>();
