@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::{Read, Write};
 use std::{collections::HashSet, io};
+use clap::{Parser, Subcommand};
 
 use ptree::PackedTree;
 
@@ -25,6 +26,52 @@ mod ffi {
         unsafe fn filter(query: *const u8, trgts: *const u8, result: *mut u8, qlen: i32, tlen: i32, n: i32);
     }
 }
+
+#[derive(Parser, Debug)]
+struct Args {
+    /// Verbose mode
+    #[arg(short, long)]
+    verbose: bool,
+
+    /// Command to execute
+    #[command(subcommand)]
+    command: Command
+}
+
+#[derive(Subcommand, Debug)]
+enum Command {
+    /// Align sequences to a query
+    AlignToFasta {
+        /// Path to the reference fasta file
+        #[arg(short, long)]
+        fasta: String,
+
+        /// Path to the query sequence, if not specified this is random
+        #[arg(short, long)]
+        query: Option<String>,
+
+        /// Length of the query sequence
+        #[arg(short, long)]
+        query_len: Option<usize>,
+
+        /// Length of the target sequence
+        #[arg(short, long)]
+        seq_len: usize,
+
+        /// Shift between sequences
+        #[arg(short, long, default_value_t = 1)]
+        delta: usize,
+
+        /// Edit distance threshold
+        #[arg(short, long)]
+        threshold: u8,
+
+        /// Number of sequences
+        #[arg(short, long)]
+        n: Option<usize>,
+    },
+}
+
 
 fn main() -> io::Result<()> {
 
